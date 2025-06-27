@@ -299,7 +299,7 @@ static void flush_dirty_copy(void *dst, void *src, lv_port_dirty_area_t *dirty_a
     }
 }
 
-IRAM_ATTR static void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
+static void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
 {
     LCD *lcd = (LCD *)drv->user_data;
     const int offsetx1 = area->x1;
@@ -377,7 +377,7 @@ IRAM_ATTR static void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, 
 
 #else
 
-IRAM_ATTR static void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
+static void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
 {
     LCD *lcd = (LCD *)drv->user_data;
 
@@ -397,7 +397,7 @@ IRAM_ATTR static void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, 
 
 #elif LVGL_PORT_FULL_REFRESH && LVGL_PORT_DISP_BUFFER_NUM == 2
 
-IRAM_ATTR static void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
+static void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
 {
     LCD *lcd = (LCD *)drv->user_data;
 
@@ -419,7 +419,7 @@ static void *lvgl_port_lcd_next_buf = NULL;
 static void *lvgl_port_flush_next_buf = NULL;
 #endif
 
-IRAM_ATTR void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
+void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
 {
     LCD *lcd = (LCD *)drv->user_data;
 
@@ -471,7 +471,7 @@ IRAM_ATTR bool onLcdVsyncCallback(void *user_data)
 
 #else
 
-IRAM_ATTR void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
+void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
 {
     LCD *lcd = (LCD *)drv->user_data;
     const int offsetx1 = area->x1;
@@ -530,7 +530,7 @@ static void update_callback(lv_disp_drv_t *drv)
 
 #endif /* LVGL_PORT_AVOID_TEAR */
 
-IRAM_ATTR void rounder_callback(lv_disp_drv_t *drv, lv_area_t *area)
+void rounder_callback(lv_disp_drv_t *drv, lv_area_t *area)
 {
     LCD *lcd = (LCD *)drv->user_data;
     uint8_t x_align = lcd->getBasicAttributes().basic_bus_spec.x_coord_align;
@@ -638,7 +638,7 @@ static lv_disp_t *display_init(LCD *lcd)
     return lv_disp_drv_register(&disp_drv);
 }
 
-static IRAM_ATTR void touchpad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
+static void touchpad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
 {
     Touch *tp = (Touch *)indev_drv->user_data;
     TouchPoint point;
@@ -671,7 +671,7 @@ static lv_indev_t *indev_init(Touch *tp)
 }
 
 #if !LV_TICK_CUSTOM
-IRAM_ATTR static void tick_increment(void *arg)
+static void tick_increment(void *arg)
 {
     /* Tell LVGL how many milliseconds have elapsed */
     lv_tick_inc(LVGL_PORT_TICK_PERIOD_MS);
@@ -726,7 +726,7 @@ static void lvgl_port_task(void *arg)
     }
 }
 
-IRAM_ATTR bool onDrawBitmapFinishCallback(void *user_data)
+bool onDrawBitmapFinishCallback(void *user_data)
 {
     lv_disp_drv_t *drv = (lv_disp_drv_t *)user_data;
 
