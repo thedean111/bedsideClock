@@ -10,8 +10,8 @@ CONFIGURATION
 #include "clock_messages.h"
 #include "clock_ui.h"
 
-#define PERIOD_UPDATE_MESSAGE_MIN 1
-#define PERIOD_SAVE_USED_MIN 20
+#define PERIOD_UPDATE_MESSAGE_MIN .1
+#define PERIOD_SAVE_USED_MIN .2
 #define PERIOD_UPDATE_TIME_INCREMENT 2000 // 60000 is every a minute
 
 // Namespaces

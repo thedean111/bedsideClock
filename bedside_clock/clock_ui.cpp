@@ -1,7 +1,7 @@
 #include "clock_ui.h"
 
 void InitUI() {
-    setTimeBtnVisible = true;
+    setTimeBtnVisible = false;
     settingTime = false;
     timeSet = false;
     hour = 12;
@@ -40,8 +40,6 @@ void InitUI() {
     lv_style_set_line_color(&line_style, lv_color_hex(0x303030));
 
     lv_style_init(&incrTimeBtnBg);
-    // lv_style_set_width(&incrTimeBtnBg, 65);
-    // lv_style_set_height(&incrTimeBtnBg, 65);
     
     lv_style_init(&incrTimeBtn);
     lv_style_set_bg_color(&incrTimeBtn, lv_color_hex(0xacb1bc));
@@ -51,22 +49,18 @@ void InitUI() {
     //-----
     setTimeBtns = lv_obj_create(lv_scr_act());
     lv_obj_remove_style_all(setTimeBtns);
-    lv_obj_align(setTimeBtns, LV_ALIGN_TOP_MID, 0, 85);
-    lv_obj_set_size(setTimeBtns, 500, 228);
-    lv_obj_set_style_bg_color(setTimeBtns, lv_color_hex(0x111111), 0);
-    lv_obj_set_style_bg_opa(setTimeBtns, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(setTimeBtns, 2, 0);
-    lv_obj_set_style_border_color(setTimeBtns, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(setTimeBtns, LV_ALIGN_TOP_MID, 0, 75);
+    lv_obj_set_size(setTimeBtns, 600, 228);
     lv_obj_set_layout(setTimeBtns, LV_USE_GRID);
     lv_obj_set_grid_dsc_array(setTimeBtns, column, row);
     lv_obj_set_grid_align(setTimeBtns, LV_GRID_ALIGN_SPACE_EVENLY, LV_GRID_ALIGN_SPACE_BETWEEN);
 
     uint32_t i, j;
+    static TimeComponent tc[2][3];
     for (i = 0; i < 2; i++) {
         for (j = 0; j < 3; j++) {
-            TimeComponent tc;
-            tc.setting = (TimeComp)j;
-            tc.value = (2*i) - 1;
+            tc[i][j].setting = static_cast<TimeComp>(j);
+            tc[i][j].value = int8_t(((2*i) - 1) * -1);
 
             lv_obj_t *btnContainer = lv_btn_create(setTimeBtns);
             lv_obj_t *btnImg = lv_img_create(btnContainer);
@@ -78,7 +72,7 @@ void InitUI() {
             lv_img_set_angle(btnImg, 1800 * i);
             lv_obj_set_grid_cell(btnContainer, LV_GRID_ALIGN_STRETCH, j, 1, 
                                                LV_GRID_ALIGN_STRETCH, i, 1);
-            lv_obj_add_event_cb(btnContainer, IncrementTimeComponent, LV_EVENT_CLICKED, &tc);
+            lv_obj_add_event_cb(btnContainer, IncrementTimeComponent, LV_EVENT_CLICKED, &tc[i][j]);
         }
     }
 
@@ -152,11 +146,12 @@ void InitUI() {
     // DEFAULT STATE
     //---
     ToggleElement(confirmBtn, false, 0, 0);
+    ToggleElement(setTimeBtns, false, 0, 0);
+    ToggleElement(setTimeBtn, false, 0, 0);
 }
 
 void UpdateTimeString() {
     int hr = ((hour + 11) % 12) + 1;
-    bool isPm = hour > 12;
     snprintf(currentTime, sizeof(currentTime), "%02d:%02d %s", 
     hr, 
     minute, 
@@ -178,9 +173,6 @@ void IncrementTime() {
         changeMessage = true;
         minute = 0;
         hour = (hour + 1) % 24;
-
-        if (hour == 8) {
-        }
 
         // If its the 0 hour increment the day
         if (hour == 0) {
@@ -241,6 +233,7 @@ void OnSetTime(lv_event_t *e) {
     ToggleElement(labels.date_l, false, 200, 0);
     ToggleElement(setTimeBtn, false, 200, 0);
     ToggleElement(confirmBtn, true, 200, 200);
+    ToggleElement(setTimeBtns, true, 200, 0);
     ESP_UTILS_LOGI("Settings button tapped!");
 }
 
@@ -249,22 +242,62 @@ void ConfirmSetting(lv_event_t *e) {
         lastTimeUpdate = millis();
         settingTime = false;
         timeSet = true;
+        if (isPm && hour < 12) {
+            hour += 12;
+        } else if (!isPm && hour >= 12) {
+            hour -= 12;
+        }
         ToggleElement(labels.date_l, true, 200, 0);
         ToggleElement(confirmBtn, false, 200, 0);
+        ToggleElement(setTimeBtns, false, 200, 0);
     }
 }
 
 void ToggleElement(lv_obj_t *obj, bool status, int time, int delay) {
+    uint32_t i = 0;
     if (status) {
         lv_obj_fade_in(obj, time, delay);
         lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_t * child = lv_obj_get_child(obj, i);
+        while(child) {
+            lv_obj_add_flag(child, LV_OBJ_FLAG_CLICKABLE);
+            i++;
+            child = lv_obj_get_child(obj, i);
+        }
     } else {
         lv_obj_fade_out(obj, time, delay);
         lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_t * child = lv_obj_get_child(obj, i);
+        while(child) {
+            lv_obj_clear_flag(child, LV_OBJ_FLAG_CLICKABLE);
+            i++;
+            child = lv_obj_get_child(obj, i);
+        }
     }
 }
 
 void IncrementTimeComponent(lv_event_t *e) {
     TimeComponent* tc = (TimeComponent *)lv_event_get_user_data(e);
-    ESP_UTILS_LOGI("%d, %d", tc->setting, tc->value);
+    switch(tc->setting) {
+        case TimeComp::HOUR:
+            hour = (hour + tc->value) % 24;
+            break;
+        
+        case TimeComp::MINUTE:
+            minute = (minute + tc->value) % 60;
+            break;
+        
+        case TimeComp::AMPM:
+            isPm = !isPm;
+            break;
+            
+        default:
+            break;
+    }
+
+    UpdateTimeString();
+    lvgl_port_lock(-1);
+    lv_label_set_text(labels.time_l, currentTime);
+    lvgl_port_unlock();
+    ESP_UTILS_LOGI("%d, %d", (int)tc->setting, tc->value);
 }
