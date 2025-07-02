@@ -1,0 +1,69 @@
+# Compiled binaries, object files, and build directories
+build/
+sdkconfig.json
+# Older versions of sdkconfig (menuconfig generates these)
+sdkconfig.old
+# Temporary C/C++ object files (often within build/)
+*.o
+*.obj
+*.elf
+*.bin
+*.map
+*.a
+*.lib
+*.so
+*.dll
+
+# Partition table files generated during build (e.g., flash_project_args)
+# Exclude the generated CSV if it's not the source for partitions.csv
+# If you hand-edit partitions.csv, keep it. If generated, exclude.
+# For this setup, you have a hand-edited partitions.csv in the root, so it should be included.
+# flash_project_args
+
+# ESP-IDF specific files
+# These are managed by the idf_component_manager
+managed_components/
+.bootloader_offset
+.esp-idf
+
+# Python virtual environment (if created locally)
+venv/
+.venv/
+env/
+
+# VS Code specific files (IDE settings)
+.vscode/
+# Exclude specific VS Code files that are user-specific or temporary
+.vscode/*.log
+.vscode/*.txt
+.vscode/.history/
+.vscode/__pycache__/
+.vscode/launch.json # If you customize launch.json for specific debuggers and don't want to share
+.vscode/tasks.json # If you customize tasks and don't want to share
+
+# Eclipse IDE files (if you were using Eclipse, though you're using VS Code)
+.cproject
+.project
+.settings/
+
+# Doxygen related files
+docs/_build/
+
+# Miscellaneous temporary files
+*.pyc
+*.pyo
+*.swp
+*~
+*.bak
+*.temp
+*.tmp
+*.log
+*.DS_Store # macOS specific
+Thumbs.db # Windows specific
+
+# Generated LittleFS/SPIFFS image file
+# If you're building a filesystem image that gets embedded, it's typically
+# generated in the build directory. For example, by the `gen_esp32part.py` script.
+# The name might vary slightly based on your component setup, but it's often a .bin file.
+build/*.img
+build/flash_args
