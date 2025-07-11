@@ -16,6 +16,7 @@ static lv_obj_t *calendarSelect;
 static lv_obj_t *settingsImg;
 static lv_obj_t *setTimeBtn;
 static lv_obj_t *setDateBtn;
+static lv_obj_t *cycleMsgBtn;
 static bool setTimeBtnVisible;
 static lv_coord_t column[] = {50,50,50,LV_GRID_TEMPLATE_LAST};
 static lv_coord_t row[]    = {50,50,LV_GRID_TEMPLATE_LAST};
@@ -25,6 +26,7 @@ static bool settingTime;
 static bool settingDate;
 static bool changeMessage;
 static bool timeSet = false;
+static bool dateSet = false;
 static char currentTime[16];
 static char currentDate[32];
 static int hour;
@@ -35,6 +37,10 @@ static uint16_t year;
 static bool isPm;
 static lv_style_t screen_style, text_style, time_style, line_style;
 static lv_style_t incrTimeBtnBg, incrTimeBtn;
+static lv_anim_t timeBlink;
+static lv_anim_t dateBlink;
+static lv_anim_t msgFadeOut;
+static char *currentMsg = "";
 
 void InitUI() {
     setTimeBtnVisible = false;
@@ -146,11 +152,23 @@ void InitUI() {
 
     // Create Message Label
     message_l = lv_label_create(lv_scr_act());
-    lv_label_set_text(message_l, "-");
+    lv_label_set_text(message_l, "");
     lv_obj_add_style(message_l, &text_style, 0);
     lv_obj_align(message_l, LV_ALIGN_TOP_MID, 0, 400);
     lv_obj_set_width(message_l, 650);
 
+    // Cycle message button
+    cycleMsgBtn = lv_btn_create(lv_scr_act());
+    lv_obj_remove_style_all(cycleMsgBtn);
+    lv_obj_clear_flag(cycleMsgBtn, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    lv_obj_align(cycleMsgBtn, LV_ALIGN_BOTTOM_LEFT, 25, -25);
+    lv_obj_set_size(cycleMsgBtn, 65, 65);
+    lv_obj_t *cycleImg = lv_img_create(cycleMsgBtn);
+    lv_img_set_src(cycleImg, &cycle);
+    lv_obj_center(cycleImg);
+    lv_obj_set_style_img_recolor_opa(cycleImg, LV_OPA_COVER, 0);
+    lv_obj_set_style_img_recolor(cycleImg, lv_color_hex(0x272e2f), 0);
+    lv_obj_set_style_img_recolor(cycleImg, lv_color_hex(0x272e2f), 0);
 
     // Create Gear Button
     setTimeBtn = lv_btn_create(header);
@@ -221,6 +239,33 @@ void InitUI() {
     lv_obj_add_event_cb(setDateBtn, OnSetDate, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(confirmBtn, ConfirmSettings, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(calendarSelect, OnSelectDay, LV_EVENT_ALL , NULL);
+    lv_obj_add_event_cb(cycleMsgBtn, CycleMessageCallback, LV_EVENT_PRESSED, NULL);
+
+    //-----
+    // ANIMATIONS
+    //-----
+    lv_anim_init(&dateBlink);
+    lv_anim_init(&timeBlink);
+    lv_anim_init(&msgFadeOut);
+    lv_anim_set_exec_cb(&dateBlink, (lv_anim_exec_xcb_t) lv_obj_set_style_opa);
+    lv_anim_set_exec_cb(&timeBlink, (lv_anim_exec_xcb_t) lv_obj_set_style_opa);
+    lv_anim_set_exec_cb(&msgFadeOut, (lv_anim_exec_xcb_t) lv_obj_set_style_opa);
+    lv_anim_set_var(&dateBlink, date_l);
+    lv_anim_set_var(&timeBlink, time_l);
+    lv_anim_set_var(&msgFadeOut, message_l);
+    lv_anim_set_values(&dateBlink, LV_OPA_0, LV_OPA_100);
+    lv_anim_set_values(&timeBlink, LV_OPA_0, LV_OPA_100);
+    lv_anim_set_values(&msgFadeOut, LV_OPA_100, LV_OPA_0);
+    lv_anim_set_time(&dateBlink, BLINK_PERIOD_MS);
+    lv_anim_set_time(&timeBlink, BLINK_PERIOD_MS);
+    lv_anim_set_time(&msgFadeOut, MESSAGE_FADE_MS);
+    lv_anim_set_playback_time(&dateBlink, BLINK_PERIOD_MS);
+    lv_anim_set_playback_time(&timeBlink, BLINK_PERIOD_MS);
+    lv_anim_set_repeat_count(&dateBlink, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_repeat_count(&timeBlink, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_start(&dateBlink);
+    lv_anim_start(&timeBlink);
+    lv_anim_set_ready_cb(&msgFadeOut, MessageFadeCallback);
     lvgl_port_unlock();
 
     //---
@@ -230,6 +275,7 @@ void InitUI() {
     ToggleElement(setTimeBtns, false, 0, 0, true);
     ToggleElement(setTimeBtn, false, 0, 0, false);
     ToggleElement(setDateBtn, false, 0, 0, false);
+    ToggleElement(cycleMsgBtn, false, 0, 0, false);
     ToggleElement(calendarSelect, false, 0, 0, true);
 }
 
@@ -248,6 +294,16 @@ void UpdateDateString() {
     year);
 }
 
+void MessageFadeCallback(lv_anim_t *anim) {
+    ESP_LOGI("LVGL","Animation finished!");
+    lv_label_set_text(message_l, currentMsg);
+    lv_obj_fade_in(message_l, MESSAGE_FADE_MS, 0);
+}
+
+void CycleMessageCallback(lv_event_t *e) {
+    UpdateMessage(GetMessage());
+}
+
 void IncrementTime() {
     // Only increment if the time has been set
     if (!timeSet) {
@@ -258,8 +314,6 @@ void IncrementTime() {
     minute += 1;
     // If 60 minutes passed increment the hour
     if (minute >= MINUTE_IN_HOUR) {
-        UpdateMessage(GetMessage());
-
         minute = 0;
         hour = (hour + 1) % 24;
 
@@ -280,6 +334,11 @@ void IncrementTime() {
                 }
             }
             UpdateDateString();
+        
+        // Update the message on the 8th hour
+        // ....really can be anything here
+        } else if (hour == 8) {
+            UpdateMessage(GetMessage());
         }
     }
 
@@ -293,9 +352,10 @@ void IncrementTime() {
 }
 
 void UpdateMessage(const char *msg) {
+    currentMsg = msg;
     // Lock LVGL while modifying UI
     lvgl_port_lock(-1);
-    lv_label_set_text(message_l, msg);
+    lv_anim_start(&msgFadeOut);
     lvgl_port_unlock();
 }
 
@@ -311,11 +371,13 @@ void OnScreenTap(lv_event_t *e) {
     if (setTimeBtnVisible) {
         ToggleElement(setTimeBtn, false, 200, 0, false);
         ToggleElement(setDateBtn, false, 200, 0, false);
+        ToggleElement(cycleMsgBtn, false, 200, 0, false);
         setTimeBtnVisible = false;
 
     } else {
         ToggleElement(setTimeBtn, true, 200, 0, false);
         ToggleElement(setDateBtn, true, 200, 0, false);
+        ToggleElement(cycleMsgBtn, true, 200, 0, false);
         setTimeBtnVisible = true;
     }
 
@@ -324,9 +386,17 @@ void OnScreenTap(lv_event_t *e) {
 
 void OnSetTime(lv_event_t *e) {
     settingTime = true;
-    timeSet = false;
+
+    if (!timeSet) {
+        ESP_LOGI(TAG, "Setting time for the first time!");
+        timeSet = true;
+        lv_anim_del(time_l, (lv_anim_exec_xcb_t) lv_obj_set_style_opa);
+        lv_obj_set_style_opa(time_l, LV_OPA_100, 0);
+    }
+
     ToggleElement(date_l, false, 200, 0, false);
     ToggleElement(setTimeBtn, false, 200, 0, false);
+    ToggleElement(cycleMsgBtn, false, 200, 0, false);
     ToggleElement(setDateBtn, false, 200, 0, false);
     ToggleElement(confirmBtn, true, 200, 200, false);
     ToggleElement(setTimeBtns, true, 200, 0, true);
@@ -337,16 +407,23 @@ void OnSetDate(lv_event_t *e) {
     if (settingDate)
         return;
 
+    if (!dateSet) {
+        ESP_LOGI(TAG, "Setting date for the first time!");
+        dateSet = true;
+        lv_anim_del(date_l, (lv_anim_exec_xcb_t) lv_obj_set_style_opa);
+        lv_obj_set_style_opa(date_l, LV_OPA_100, 0);
+    }
+
     settingDate = true;
     lv_calendar_set_showed_date(calendarSelect, year, month);
     ToggleElement(calendarSelect, true, 200, 0, true);
     ToggleElement(setTimeBtn, false, 200, 0, false);
     ToggleElement(setDateBtn, false, 200, 0, false);
+    ToggleElement(cycleMsgBtn, false, 200, 0, false);
 }
 
 void ConfirmSettings(lv_event_t *e) {
     if (settingTime) {
-        // lastTimeUpdate = esp_timer_get_time();
         settingTime = false;
         timeSet = true;
         if (isPm && hour < 12) {
@@ -354,6 +431,11 @@ void ConfirmSettings(lv_event_t *e) {
         } else if (!isPm && hour >= 12) {
             hour -= 12;
         }
+
+        if (strcmp(currentMsg, "") == 0) {
+            UpdateMessage(GetMessage());
+        }
+
         ToggleElement(date_l, true, 200, 0, false);
         ToggleElement(confirmBtn, false, 200, 0, false);
         ToggleElement(setTimeBtns, false, 200, 0, true);

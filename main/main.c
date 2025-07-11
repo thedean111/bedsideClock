@@ -10,7 +10,7 @@
 #include "clock_ui.h"
 #include "clock_messages.h"
 
-#define CLOCK_UPDATE_FACTOR .1
+#define CLOCK_UPDATE_FACTOR 1
 
 
 static esp_timer_handle_t esp_timer;

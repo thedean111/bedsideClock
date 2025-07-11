@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "waveshare_rgb_lcd_port.c" 
+    SRCS "cycle.c" "waveshare_rgb_lcd_port.c" 
     "main.c" 
     "lvgl_port.c" 
     "clock_ui.c"

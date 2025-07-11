@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include "clock_messages.h"
 
 LV_FONT_DECLARE(xanh_mono_108);
@@ -17,8 +18,11 @@ LV_IMG_DECLARE(set_time);
 LV_IMG_DECLARE(checkmark);
 LV_IMG_DECLARE(arrow_1);
 LV_IMG_DECLARE(calendar);
+LV_IMG_DECLARE(cycle);
 
-#define MINUTE_IN_HOUR 5
+#define MINUTE_IN_HOUR 60
+#define BLINK_PERIOD_MS 1000
+#define MESSAGE_FADE_MS 300
 
 typedef enum {
     HOUR,
@@ -43,5 +47,6 @@ void OnSelectDay(lv_event_t *e);
 void IncrementTimeComponent(lv_event_t *e);
 void UpdateTimeString();
 void UpdateDateString();
-
+void MessageFadeCallback(lv_anim_t *anim);
+void CycleMessageCallback(lv_event_t *e);
 #endif // CLOCK_UI_H
